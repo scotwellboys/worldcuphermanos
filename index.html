@@ -148,6 +148,11 @@
 </header>
 
 <main>
+  <div class="filter-bar" style="margin-bottom:24px">
+    <button class="filter-btn active" onclick="setView('matches',this)">Matches</button>
+    <button class="filter-btn"        onclick="setView('groups',this)">Group Tables</button>
+  </div>
+
   <div id="admin-bar">
     <label>🔒 Admin</label>
     <input type="password" id="admin-pass" placeholder="Enter admin password to add scores…" autocomplete="off">
@@ -155,14 +160,15 @@
     <span id="admin-status"></span>
   </div>
 
+  <div id="view-matches">
   <section>
     <div class="section-title">Leaderboard</div>
     <div class="lb-wrap">
       <table class="lb-table">
         <thead><tr>
-          <th class="center">#</th><th>Player</th><th class="center">Pts</th><th class="center">W–D</th><th>Teams</th>
+          <th class="center">#</th><th>Player</th><th class="center">Pts</th><th class="center">W</th><th class="center">D</th><th class="center">L</th><th>Teams</th>
         </tr></thead>
-        <tbody id="lb-body"><tr><td colspan="5" class="status-msg">Loading…</td></tr></tbody>
+        <tbody id="lb-body"><tr><td colspan="7" class="status-msg">Loading…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -187,10 +193,14 @@
     </div>
   </section>
 
+  </div>
+
+  <div id="view-groups" style="display:none">
   <section>
     <div class="section-title">Group Tables</div>
     <div id="groups-grid"><div class="status-msg">Loading…</div></div>
   </section>
+  </div>
 </main>
 
 <div id="modal-overlay">
@@ -276,7 +286,7 @@ async function loadAll() {
     setTimeout(loadAll, 60000);
   } catch(e) {
     document.getElementById('lb-body').innerHTML =
-      `<tr><td colspan="5" class="status-msg"><span class="error">⚠ ${e.message}</span></td></tr>`;
+      `<tr><td colspan="7" class="status-msg"><span class="error">⚠ ${e.message}</span></td></tr>`;
   }
 }
 
@@ -294,8 +304,8 @@ function resolvedScore(m) {
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 function renderLeaderboard() {
-  const pts={}, wins={}, draws={}, teamPts={};
-  for (const p of Object.keys(ASSIGNMENTS)) { pts[p]=0; wins[p]=0; draws[p]=0; teamPts[p]={}; }
+  const pts={}, wins={}, draws={}, losses={}, teamPts={};
+  for (const p of Object.keys(ASSIGNMENTS)) { pts[p]=0; wins[p]=0; draws[p]=0; losses[p]=0; teamPts[p]={}; }
 
   for (const m of allMatches) {
     const sc = resolvedScore(m);
@@ -304,13 +314,13 @@ function renderLeaderboard() {
     const p1 = personFor(m.homeTeam?.name), p2 = personFor(m.awayTeam?.name);
     if (p1) {
       const p = matchPts(hg,ag); pts[p1]+=p;
-      if(p===3)wins[p1]++; if(p===1)draws[p1]++;
+      if(p===3)wins[p1]++; else if(p===1)draws[p1]++; else losses[p1]++;
       const k = ASSIGNMENTS[p1].find(t=>t.toLowerCase()===canon(m.homeTeam.name))||m.homeTeam.name;
       teamPts[p1][k] = (teamPts[p1][k]||0)+p;
     }
     if (p2) {
       const p = matchPts(ag,hg); pts[p2]+=p;
-      if(p===3)wins[p2]++; if(p===1)draws[p2]++;
+      if(p===3)wins[p2]++; else if(p===1)draws[p2]++; else losses[p2]++;
       const k = ASSIGNMENTS[p2].find(t=>t.toLowerCase()===canon(m.awayTeam.name))||m.awayTeam.name;
       teamPts[p2][k] = (teamPts[p2][k]||0)+p;
     }
@@ -323,7 +333,9 @@ function renderLeaderboard() {
       <td class="lb-rank">${rank}</td>
       <td class="lb-name">${p}</td>
       <td class="lb-pts">${v}</td>
-      <td class="lb-record">${wins[p]}W–${draws[p]}D</td>
+      <td class="lb-record">${wins[p]}</td>
+      <td class="lb-record">${draws[p]}</td>
+      <td class="lb-record">${losses[p]}</td>
       <td class="lb-teams">${ASSIGNMENTS[p].map(t=>
         `<span class="lb-team-chip ${(teamPts[p][t]||0)>0?'scoring':''}" title="${teamPts[p][t]||0} pts">${t}</span>`
       ).join('')}</td>
@@ -331,6 +343,13 @@ function renderLeaderboard() {
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
+function setView(v, btn) {
+  document.querySelectorAll('main > .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-matches').style.display = v==='matches' ? '' : 'none';
+  document.getElementById('view-groups').style.display  = v==='groups'  ? '' : 'none';
+}
+
 function setFilter(f,btn) {
   currentFilter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -399,42 +418,71 @@ function stageLabel(m) {
   return map[m.stage]||m.stage||'Group Stage';
 }
 
-// ── Group tables ──────────────────────────────────────────────────────────────
+// ── Group tables (built from match results, not API standings) ──────────────
 function renderGroups() {
   const grid = document.getElementById('groups-grid');
 
-  if (!standings.length) {
+  // Collect group-stage matches and bucket by group
+  const groups = {}; // groupKey -> { teams: Set, table: {teamName: stats} }
+
+  for (const m of allMatches) {
+    if (m.stage !== 'GROUP_STAGE') continue;
+    const groupKey = m.group || 'Unknown';
+    if (!groups[groupKey]) groups[groupKey] = { table: {} };
+
+    const home = m.homeTeam?.name, away = m.awayTeam?.name;
+    if (!home || !away) continue;
+
+    // Ensure both teams have a row even if 0 games played
+    for (const t of [home, away]) {
+      if (!groups[groupKey].table[t]) {
+        groups[groupKey].table[t] = { played:0, won:0, draw:0, lost:0, gf:0, ga:0, pts:0 };
+      }
+    }
+
+    const sc = resolvedScore(m);
+    if (!sc) continue; // not played yet — team still listed, stats stay at 0
+
+    const th = groups[groupKey].table[home];
+    const ta = groups[groupKey].table[away];
+
+    th.played++; ta.played++;
+    th.gf += sc.home; th.ga += sc.away;
+    ta.gf += sc.away; ta.ga += sc.home;
+
+    if (sc.home > sc.away) { th.won++; th.pts+=3; ta.lost++; }
+    else if (sc.home < sc.away) { ta.won++; ta.pts+=3; th.lost++; }
+    else { th.draw++; ta.draw++; th.pts++; ta.pts++; }
+  }
+
+  const groupKeys = Object.keys(groups).sort();
+
+  if (!groupKeys.length) {
     grid.innerHTML = '<div class="status-msg">Group tables not yet available.</div>';
     return;
   }
 
-  // football-data.org returns one TOTAL standings table per group
-  const groupTables = standings.filter(s => s.type === 'TOTAL' && s.group);
+  grid.innerHTML = groupKeys.map(gk => {
+    let groupName = gk.replace(/^GROUP_/i, '');
+    groupName = groupName.length <= 2 ? `Group ${groupName}` : groupName;
+    const teams = Object.entries(groups[gk].table)
+      .map(([name, s]) => ({ name, ...s, gd: s.gf - s.ga }))
+      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.name.localeCompare(b.name));
 
-  // Sort groups alphabetically (Group A, B, C...)
-  groupTables.sort((a,b) => (a.group||'').localeCompare(b.group||''));
-
-  if (!groupTables.length) {
-    grid.innerHTML = '<div class="status-msg">Group tables not yet available.</div>';
-    return;
-  }
-
-  grid.innerHTML = groupTables.map(g => {
-    const groupName = (g.group||'').replace('GROUP_','Group ');
-    const rows = (g.table||[]).map((row, idx) => {
-      const teamName = row.team?.name || '';
-      const person = personFor(teamName);
+    const rows = teams.map((row, idx) => {
+      const person = personFor(row.name);
       const isOurs = !!person;
       const top2 = idx < 2 ? 'top2' : '';
+      const gdStr = (row.gd > 0 ? '+' : '') + row.gd;
       return `<tr class="${top2}">
         <td>${idx+1}</td>
-        <td class="team-td${isOurs?' ours':''}">${teamName}${person?`<span class="person-tag">${person}</span>`:''}</td>
-        <td>${row.playedGames ?? 0}</td>
-        <td>${row.won ?? 0}</td>
-        <td>${row.draw ?? 0}</td>
-        <td>${row.lost ?? 0}</td>
-        <td>${(row.goalsFor??0)}-${(row.goalsAgainst??0)}</td>
-        <td class="pts-td">${row.points ?? 0}</td>
+        <td class="team-td${isOurs?' ours':''}">${row.name}${person?`<span class="person-tag">${person}</span>`:''}</td>
+        <td>${row.played}</td>
+        <td>${row.won}</td>
+        <td>${row.draw}</td>
+        <td>${row.lost}</td>
+        <td>${gdStr}</td>
+        <td class="pts-td">${row.pts}</td>
       </tr>`;
     }).join('');
 
