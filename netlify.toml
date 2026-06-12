@@ -1,0 +1,23 @@
+[build]
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[context.production.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/api/scores"
+  to = "/.netlify/functions/scores"
+  status = 200
+
+[[redirects]]
+  from = "/api/save-score"
+  to = "/.netlify/functions/save-score"
+  status = 200
+
+[[redirects]]
+  from = "/api/get-scores"
+  to = "/.netlify/functions/get-scores"
+  status = 200

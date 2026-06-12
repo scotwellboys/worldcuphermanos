@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 World Cup Sweepstake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pitch:#0A2E1A; --card:#0F3D23; --card2:#12472A;
+    --accent:#F5A623; --accent2:#E8920F; --live:#FF4444;
+    --white:#FFFFFF; --off:#B8D4C0; --muted:#6A9B7A;
+    --row-alt:rgba(255,255,255,0.03); --border:rgba(255,255,255,0.08); --radius:10px;
+  }
+  html { scroll-behavior:smooth; }
+  body { font-family:'Inter',sans-serif; background:var(--pitch); color:var(--white); min-height:100vh; font-size:14px; line-height:1.5; }
+
+  header { background:linear-gradient(160deg,#0F3D23 0%,#0A2E1A 60%); border-bottom:1px solid var(--border); padding:28px 24px 20px; text-align:center; position:relative; overflow:hidden; }
+  header::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 60% 80% at 50% 120%,rgba(245,166,35,.12) 0%,transparent 70%); pointer-events:none; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.18em; color:var(--accent); text-transform:uppercase; margin-bottom:6px; }
+  h1 { font-family:'Oswald',sans-serif; font-size:clamp(28px,6vw,52px); font-weight:700; letter-spacing:.02em; line-height:1; text-transform:uppercase; }
+  h1 span { color:var(--accent); }
+  .header-sub { margin-top:8px; font-size:13px; color:var(--off); font-weight:300; }
+  .last-updated { display:inline-block; margin-top:14px; font-size:11px; color:var(--muted); background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:20px; padding:3px 12px; }
+
+  main { max-width:1100px; margin:0 auto; padding:0 16px 60px; }
+  section { margin-top:32px; }
+  .section-title { font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:18px; }
+
+  /* Leaderboard */
+  #leaderboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .lb-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; transition:transform .15s,border-color .15s; }
+  .lb-card:hover { transform:translateY(-2px); border-color:rgba(245,166,35,.3); }
+  .lb-card.first  { border-top:3px solid #FFD700; }
+  .lb-card.second { border-top:3px solid #C0C0C0; }
+  .lb-card.third  { border-top:3px solid #CD7F32; }
+  .lb-rank { font-family:'Oswald',sans-serif; font-size:28px; font-weight:700; color:var(--muted); line-height:1; }
+  .lb-card.first .lb-rank { color:#FFD700; } .lb-card.second .lb-rank { color:#C0C0C0; } .lb-card.third .lb-rank { color:#CD7F32; }
+  .lb-name { font-family:'Oswald',sans-serif; font-size:20px; font-weight:600; margin:4px 0 10px; text-transform:uppercase; letter-spacing:.04em; }
+  .lb-points { font-family:'Oswald',sans-serif; font-size:32px; font-weight:700; color:var(--accent); line-height:1; }
+  .lb-pts-label { font-size:11px; color:var(--muted); margin-top:1px; }
+  .lb-breakdown { margin-top:6px; font-size:11px; color:var(--muted); }
+  .lb-teams { margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }
+  .lb-team-chip { font-size:10px; font-weight:500; background:rgba(255,255,255,.08); border-radius:4px; padding:2px 7px; color:var(--off); }
+  .lb-team-chip.scoring { background:rgba(245,166,35,.2); color:var(--accent); }
+
+  /* Filters */
+  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+  .filter-label { font-size:12px; color:var(--muted); }
+  .filter-btn { font-size:12px; font-weight:500; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:20px; padding:5px 14px; color:var(--off); cursor:pointer; transition:all .15s; }
+  .filter-btn:hover,.filter-btn.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
+
+  /* Table */
+  .fixtures-wrap { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; min-width:640px; }
+  thead th { background:var(--card2); font-family:'Oswald',sans-serif; font-size:12px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:11px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th.center { text-align:center; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:nth-child(even) { background:var(--row-alt); }
+  tbody tr:hover { background:rgba(255,255,255,.05); }
+  tbody tr.sweep-row { background:rgba(245,166,35,.06); }
+  tbody tr.sweep-row:hover { background:rgba(245,166,35,.1); }
+  tbody tr.scored-row { font-style:italic; opacity:0.8; }
+  tbody tr.scored-row td.team-col { color:var(--off); }
+  tbody tr.scored-row td.team-col.ours { color:var(--accent); font-style:italic; }
+  tr.stage-div td { background:rgba(255,255,255,.04); font-family:'Oswald',sans-serif; font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:6px 12px; border-top:1px solid var(--border); }
+  td { padding:9px 12px; font-size:13px; color:var(--off); vertical-align:middle; }
+  td.date-col { white-space:nowrap; font-size:12px; color:var(--muted); }
+  td.time-col { white-space:nowrap; font-weight:500; color:var(--white); font-size:12px; }
+  td.team-col { font-weight:500; color:var(--white); }
+  td.team-col.ours { color:var(--accent); font-weight:600; }
+  td.person-col { font-size:12px; color:var(--accent); font-weight:600; }
+  td.score-col { text-align:center; font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; white-space:nowrap; min-width:90px; }
+  td.stage-col { font-size:11px; color:var(--muted); white-space:nowrap; }
+  td.edit-col { width:36px; text-align:center; }
+
+  .badge { display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:3px 10px; font-size:15px; letter-spacing:.05em; }
+  .badge.ft  { background:rgba(245,166,35,.1); color:var(--accent); }
+  .badge.pre { color:var(--muted); font-size:13px; }
+
+  /* Edit button — pencil icon, only visible to admin */
+  .edit-btn { background:none; border:1px solid var(--border); border-radius:5px; color:var(--muted); cursor:pointer; padding:3px 7px; font-size:13px; transition:all .15s; display:none; }
+  .edit-btn:hover { border-color:var(--accent); color:var(--accent); }
+  body.admin-mode .edit-btn { display:inline-block; }
+
+  /* Admin panel */
+  #admin-bar { background:rgba(245,166,35,.08); border:1px solid rgba(245,166,35,.25); border-radius:var(--radius); padding:12px 16px; margin:20px auto; max-width:900px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  #admin-bar label { font-size:13px; color:var(--accent); font-weight:600; white-space:nowrap; }
+  #admin-pass { flex:1; min-width:160px; background:rgba(0,0,0,.3); border:1px solid rgba(245,166,35,.4); border-radius:6px; padding:7px 12px; color:var(--white); font-family:'Inter',sans-serif; font-size:13px; outline:none; }
+  #admin-pass:focus { border-color:var(--accent); }
+  #admin-pass::placeholder { color:var(--muted); }
+  .btn { background:var(--accent); color:#000; border:none; border-radius:6px; padding:7px 18px; font-family:'Oswald',sans-serif; font-size:14px; font-weight:600; letter-spacing:.05em; cursor:pointer; transition:background .15s; }
+  .btn:hover { background:var(--accent2); }
+  .btn-sm { padding:5px 12px; font-size:12px; }
+  #admin-status { font-size:12px; color:var(--muted); }
+
+  /* Score entry modal */
+  #modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:center; justify-content:center; }
+  #modal-overlay.open { display:flex; }
+  #modal { background:#0F3D23; border:1px solid rgba(245,166,35,.3); border-radius:var(--radius); padding:28px; width:min(420px,90vw); }
+  #modal h3 { font-family:'Oswald',sans-serif; font-size:18px; color:var(--accent); margin-bottom:6px; }
+  #modal .match-label { font-size:13px; color:var(--off); margin-bottom:20px; }
+  .score-inputs { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  .score-inputs input { width:70px; background:rgba(0,0,0,.4); border:1px solid rgba(245,166,35,.4); border-radius:6px; padding:10px; color:var(--white); font-family:'Oswald',sans-serif; font-size:28px; font-weight:700; text-align:center; outline:none; }
+  .score-inputs input:focus { border-color:var(--accent); }
+  .score-inputs .vs { font-family:'Oswald',sans-serif; font-size:20px; color:var(--muted); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .btn-cancel { background:transparent; border:1px solid var(--border); color:var(--off); border-radius:6px; padding:7px 16px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; transition:all .15s; }
+  .btn-cancel:hover { border-color:var(--off); }
+
+  .status-msg { text-align:center; padding:28px; font-size:13px; color:var(--muted); }
+  .error { color:#FF8888; }
+
+  @media(max-width:600px){
+    #leaderboard-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .lb-card { padding:12px; }
+    td { padding:8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Family Sweepstake</div>
+  <h1>2026 <span>World Cup</span></h1>
+  <div class="header-sub">48 teams · 8 players · Win = 3pts · Draw = 1pt</div>
+  <div class="last-updated" id="ts">Loading…</div>
+</header>
+
+<main>
+  <!-- Admin bar — always visible so Robert can enter password -->
+  <div id="admin-bar">
+    <label>🔒 Admin</label>
+    <input type="password" id="admin-pass" placeholder="Enter admin password to add scores…" autocomplete="off">
+    <button class="btn btn-sm" onclick="unlockAdmin()">Unlock</button>
+    <span id="admin-status"></span>
+  </div>
+
+  <section>
+    <div class="section-title">Leaderboard</div>
+    <div id="leaderboard-grid"><div class="status-msg">Loading…</div></div>
+  </section>
+
+  <section>
+    <div class="section-title">Fixtures</div>
+    <div class="filter-bar">
+      <span class="filter-label">Show:</span>
+      <button class="filter-btn active" onclick="setFilter('all',this)">All games</button>
+      <button class="filter-btn"        onclick="setFilter('sweep',this)">Our teams only</button>
+      <button class="filter-btn"        onclick="setFilter('scored',this)">Scored</button>
+      <button class="filter-btn"        onclick="setFilter('today',this)">Today</button>
+    </div>
+    <div class="fixtures-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Time (UK)</th>
+          <th>Home</th><th class="center">Score</th><th>Away</th>
+          <th>Person 1</th><th>Person 2</th><th>Stage</th>
+          <th class="center" id="edit-col-header" style="display:none">✏️</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="9" class="status-msg">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Score entry modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h3>Enter Score</h3>
+    <div class="match-label" id="modal-label"></div>
+    <div class="score-inputs">
+      <input type="number" id="score-home" min="0" max="20" placeholder="0">
+      <span class="vs">–</span>
+      <input type="number" id="score-away" min="0" max="20" placeholder="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveScore()">Save Score</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Sweepstake data ──────────────────────────────────────────────────────────
+const ASSIGNMENTS = {
+  'Mum':    ['Netherlands','Uruguay','Sweden','Ivory Coast','Scotland','Curaçao'],
+  'Robert': ['Spain','Croatia','South Korea','Canada','Uzbekistan','DR Congo'],
+  'Karen':  ['Portugal','Switzerland','Senegal','Ghana','Iraq','Haiti'],
+  'Dave':   ['England','Morocco','Egypt','Iran','Bosnia and Herzegovina','South Africa'],
+  'Leanda': ['Argentina','Colombia','Japan','Algeria','Qatar','New Zealand'],
+  'James':  ['France','Belgium','Mexico','Saudi Arabia','Paraguay','Cape Verde'],
+  'Louis':  ['Germany','USA','Ecuador','Tunisia','Jordan','Türkiye'],
+  'Apple':  ['Brazil','Norway','Austria','Australia','Panama','Czechia'],
+};
+
+const ALIASES = {
+  // Ivory Coast
+  "côte d'ivoire":'ivory coast', "cote d'ivoire":'ivory coast',
+  "côte d\'ivoire":'ivory coast',
+  // DR Congo
+  'congo, the democratic republic of the':'dr congo',
+  'democratic republic of congo':'dr congo',
+  'congo dr':'dr congo', 'dr congo':'dr congo', 'congo, dr':'dr congo',
+  // South Korea
+  'korea republic':'south korea', 'republic of korea':'south korea',
+  // USA
+  'united states':'usa', 'united states of america':'usa',
+  // Cape Verde
+  'cabo verde':'cape verde', 'cape verde islands':'cape verde', 'cape verde':'cape verde',
+  // Curaçao
+  'curacao':'curaçao',
+  // Türkiye
+  'turkey':'türkiye', 'turkiye':'türkiye',
+  // Bosnia
+  'bosnia-herzegovina':'bosnia and herzegovina',
+  'bosnia & herzegovina':'bosnia and herzegovina',
+  'bosnia and herzegovina':'bosnia and herzegovina',
+  // New Zealand
+  'new zealand':'new zealand',
+  // Saudi Arabia
+  'saudi arabia':'saudi arabia',
+  // South Africa
+  'south africa':'south africa',
+};
+
+const TEAM_PERSON = {};
+for (const [p,ts] of Object.entries(ASSIGNMENTS)) for (const t of ts) TEAM_PERSON[t.toLowerCase()] = p;
+function canon(n) { if(!n)return''; const l=n.toLowerCase().trim(); return ALIASES[l]||l; }
+function personFor(n) { return TEAM_PERSON[canon(n)]||''; }
+
+function matchPts(hg, ag) {
+  if (hg == null || ag == null) return 0;
+  return hg > ag ? 3 : hg === ag ? 1 : 0;
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allMatches   = [];   // from football-data.org (fixtures/teams/times)
+let manualScores = {};   // { matchId: { home, away } } from Netlify Blobs
+let currentFilter = 'all';
+let adminUnlocked = false;
+let currentMatchId = null;
+
+// ── Load everything ───────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [fixturesRes, scoresRes] = await Promise.all([
+      fetch('/api/scores'),
+      fetch('/api/get-scores'),
+    ]);
+
+    const fixturesData = await fixturesRes.json();
+    if (fixturesData.error) throw new Error(fixturesData.error);
+    if (!fixturesData.matches?.length) throw new Error('No fixtures from API.');
+
+    manualScores = scoresRes.ok ? await scoresRes.json() : {};
+
+    allMatches = fixturesData.matches.sort((a,b) => new Date(a.utcDate)-new Date(b.utcDate));
+
+    render();
+    document.getElementById('ts').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
+
+    setTimeout(loadAll, 60000);
+  } catch(e) {
+    document.getElementById('leaderboard-grid').innerHTML =
+      `<div class="status-msg"><span class="error">⚠ ${e.message}</span></div>`;
+  }
+}
+
+function render() { renderLeaderboard(); renderFixtures(); }
+
+// ── Score resolution — manual overrides API ───────────────────────────────────
+function resolvedScore(m) {
+  const manual = manualScores[String(m.id)];
+  if (manual) return { home: manual.home, away: manual.away, source: 'manual' };
+  const api_h = m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? null;
+  const api_a = m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? null;
+  if (api_h !== null && api_a !== null) return { home: api_h, away: api_a, source: 'api' };
+  return null;
+}
+
+function isFinished(m) {
+  return !!manualScores[String(m.id)] || ['FINISHED','AWARDED'].includes(m.status);
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+function renderLeaderboard() {
+  const pts={}, wins={}, draws={}, teamPts={};
+  for (const p of Object.keys(ASSIGNMENTS)) { pts[p]=0; wins[p]=0; draws[p]=0; teamPts[p]={}; }
+
+  for (const m of allMatches) {
+    const sc = resolvedScore(m);
+    if (!sc) continue;
+    const { home: hg, away: ag } = sc;
+    const p1 = personFor(m.homeTeam?.name), p2 = personFor(m.awayTeam?.name);
+
+    if (p1) {
+      const p = matchPts(hg,ag); pts[p1]+=p;
+      if(p===3)wins[p1]++; if(p===1)draws[p1]++;
+      const k = ASSIGNMENTS[p1].find(t=>t.toLowerCase()===canon(m.homeTeam.name))||m.homeTeam.name;
+      teamPts[p1][k] = (teamPts[p1][k]||0)+p;
+    }
+    if (p2) {
+      const p = matchPts(ag,hg); pts[p2]+=p;
+      if(p===3)wins[p2]++; if(p===1)draws[p2]++;
+      const k = ASSIGNMENTS[p2].find(t=>t.toLowerCase()===canon(m.awayTeam.name))||m.awayTeam.name;
+      teamPts[p2][k] = (teamPts[p2][k]||0)+p;
+    }
+  }
+
+  const ranked = Object.entries(pts).sort((a,b)=>b[1]-a[1]).map(([p,v],i)=>({p,v,rank:i+1}));
+  const medals = ['first','second','third'];
+  document.getElementById('leaderboard-grid').innerHTML = ranked.map(({p,v,rank})=>`
+    <div class="lb-card ${rank<=3?medals[rank-1]:''}">
+      <div class="lb-rank">${rank}</div>
+      <div class="lb-name">${p}</div>
+      <div class="lb-points">${v}</div>
+      <div class="lb-pts-label">points</div>
+      <div class="lb-breakdown">${wins[p]}W · ${draws[p]}D</div>
+      <div class="lb-teams">${ASSIGNMENTS[p].map(t=>
+        `<span class="lb-team-chip ${(teamPts[p][t]||0)>0?'scoring':''}" title="${teamPts[p][t]||0} pts">${t}</span>`
+      ).join('')}</div>
+    </div>`).join('');
+}
+
+// ── Fixtures ──────────────────────────────────────────────────────────────────
+function setFilter(f,btn) {
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFixtures();
+}
+
+function renderFixtures() {
+  const now=new Date(), todayStr=now.toDateString();
+  let lastStage='', rows='', shown=0;
+
+  for (const m of allMatches) {
+    const kickoff = new Date(m.utcDate);
+    const isToday = kickoff.toDateString()===todayStr;
+    const home = m.homeTeam?.name||'TBC', away = m.awayTeam?.name||'TBC';
+    const p1 = personFor(home), p2 = personFor(away), isSweep=!!(p1||p2);
+    const sc = resolvedScore(m);
+    const done = isFinished(m);
+
+    if (currentFilter==='sweep'  && !isSweep) continue;
+    if (currentFilter==='scored' && !sc)      continue;
+    if (currentFilter==='today'  && !isToday) continue;
+
+    const stage = stageLabel(m);
+    if (stage!==lastStage) {
+      rows+=`<tr class="stage-div"><td colspan="9">${stage}</td></tr>`;
+      lastStage=stage;
+    }
+
+    const timeStr = kickoff.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
+    const dateStr = kickoff.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'Europe/London'});
+
+    let badge = '';
+    if (sc) {
+      badge = `<span class="badge ft">${sc.home}–${sc.away}${done?' <small style="font-size:10px">FT</small>':''}</span>`;
+    } else {
+      badge = `<span class="badge pre">vs</span>`;
+    }
+
+    const editBtn = `<button class="edit-btn" onclick="openModal(${m.id},'${home.replace(/'/g,"\\'")}','${away.replace(/'/g,"\\'")}',${sc?sc.home:'null'},${sc?sc.away:'null'})" title="Enter score">✏️</button>`;
+
+    const rowClass = [isSweep?'sweep-row':'', sc?'scored-row':''].filter(Boolean).join(' ');
+    rows+=`<tr class="${rowClass}">
+      <td class="date-col">${dateStr}</td>
+      <td class="time-col">${timeStr}</td>
+      <td class="team-col${p1?' ours':''}">${home}</td>
+      <td class="score-col">${badge}</td>
+      <td class="team-col${p2?' ours':''}">${away}</td>
+      <td class="person-col">${p1}</td>
+      <td class="person-col">${p2}</td>
+      <td class="stage-col">${stage}</td>
+      <td class="edit-col">${editBtn}</td>
+    </tr>`;
+    shown++;
+  }
+
+  if (!shown) rows=`<tr><td colspan="9" class="status-msg">No matches for this filter.</td></tr>`;
+  document.getElementById('tbody').innerHTML=rows;
+}
+
+function stageLabel(m) {
+  const map = {
+    'GROUP_STAGE':'Group Stage','LAST_32':'Round of 32','LAST_16':'Round of 16',
+    'QUARTER_FINALS':'Quarter-finals','SEMI_FINALS':'Semi-finals',
+    'THIRD_PLACE':'Third Place','FINAL':'Final',
+  };
+  return map[m.stage]||m.stage||'Group Stage';
+}
+
+// ── Admin unlock ──────────────────────────────────────────────────────────────
+function unlockAdmin() {
+  const pass = document.getElementById('admin-pass').value;
+  if (!pass) return;
+  // We verify the password server-side on first save.
+  // Store it in memory only — never in localStorage.
+  adminUnlocked = true;
+  document.body.classList.add('admin-mode');
+  document.getElementById('edit-col-header').style.display='';
+  document.getElementById('admin-status').textContent = '✓ Admin mode — pencil icons now visible';
+  document.getElementById('admin-status').style.color = '#6fcf97';
+  renderFixtures();
+}
+
+// ── Score modal ───────────────────────────────────────────────────────────────
+function openModal(id, home, away, existingHome, existingAway) {
+  currentMatchId = id;
+  document.getElementById('modal-label').textContent = `${home}  vs  ${away}`;
+  document.getElementById('score-home').value = existingHome !== 'null' ? existingHome : '';
+  document.getElementById('score-away').value = existingAway !== 'null' ? existingAway : '';
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('score-home').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentMatchId = null;
+}
+
+async function saveScore() {
+  const home = document.getElementById('score-home').value;
+  const away = document.getElementById('score-away').value;
+  const pass = document.getElementById('admin-pass').value;
+
+  if (home===''||away==='') { alert('Please enter both scores.'); return; }
+
+  try {
+    const res = await fetch('/api/save-score', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ matchId: currentMatchId, home: Number(home), away: Number(away), password: pass }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      alert(data.error || 'Failed to save. Check your password.');
+      return;
+    }
+    // Update local state immediately
+    manualScores[String(currentMatchId)] = { home: Number(home), away: Number(away) };
+    closeModal();
+    render();
+  } catch(e) {
+    alert('Network error: ' + e.message);
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
