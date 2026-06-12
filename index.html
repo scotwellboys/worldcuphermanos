@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 World Cup Sweepstake</title>
-<link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -128,6 +127,20 @@
   .group-card tr.top2 td.team-td { position:relative; }
   .group-card tr.top2 td:first-child::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#6fcf97; }
 
+  /* Visit log */
+  #visit-summary { font-family:'Oswald',sans-serif; font-size:32px; font-weight:700; color:var(--accent); margin:20px auto 4px; max-width:900px; }
+  #visit-summary-label { font-size:12px; color:var(--muted); margin:0 auto 16px; max-width:900px; }
+  .visits-wrap { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); margin:0 auto; max-width:900px; }
+  table.visits { width:100%; border-collapse:collapse; min-width:480px; }
+  table.visits thead th { background:var(--card2); font-family:'Oswald',sans-serif; font-size:11px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.visits tbody tr { border-bottom:1px solid var(--border); }
+  table.visits tbody tr:last-child { border-bottom:none; }
+  table.visits tbody tr:nth-child(even) { background:var(--row-alt); }
+  table.visits td { padding:8px 12px; font-size:12px; color:var(--off); vertical-align:middle; }
+  td.visit-time { white-space:nowrap; color:var(--white); font-weight:500; }
+  td.visit-loc { white-space:nowrap; }
+  td.visit-ua { font-size:11px; color:var(--muted); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
   .status-msg { text-align:center; padding:28px; font-size:13px; color:var(--muted); }
   .error { color:#FF8888; }
 
@@ -205,6 +218,20 @@
       <input type="password" id="admin-pass" placeholder="Enter admin password to add scores…" autocomplete="off">
       <button class="btn btn-sm" onclick="unlockAdmin()">Unlock</button>
       <span id="admin-status"></span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Site Visits</div>
+    <div id="visit-summary">–</div>
+    <div id="visit-summary-label">total recorded visits</div>
+    <div class="visits-wrap">
+      <table class="visits">
+        <thead><tr>
+          <th>Date / Time (UK)</th><th>Location</th><th>Device</th>
+        </tr></thead>
+        <tbody id="visits-body"><tr><td colspan="3" class="status-msg">Loading…</td></tr></tbody>
+      </table>
     </div>
   </section>
   </div>
@@ -356,6 +383,7 @@ function setView(v, btn) {
   document.getElementById('view-matches').style.display = v==='matches' ? '' : 'none';
   document.getElementById('view-groups').style.display  = v==='groups'  ? '' : 'none';
   document.getElementById('view-admin').style.display   = v==='admin'   ? '' : 'none';
+  if (v==='admin') loadVisits();
 }
 
 function setFilter(f,btn) {
@@ -558,7 +586,53 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 
+// ── Visit logging ─────────────────────────────────────────────────────────────
+function logVisit() {
+  fetch('/api/log-visit', { method: 'POST' }).catch(()=>{});
+}
+
+function parseDevice(ua) {
+  if (!ua) return 'Unknown';
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android phone' : 'Android tablet';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows PC';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Other';
+}
+
+async function loadVisits() {
+  try {
+    const res = await fetch('/api/get-visits');
+    const data = await res.json();
+    const visits = data.visits || [];
+
+    document.getElementById('visit-summary').textContent = visits.length;
+
+    if (!visits.length) {
+      document.getElementById('visits-body').innerHTML =
+        `<tr><td colspan="3" class="status-msg">${data.configured===false ? 'Visit logging not configured.' : 'No visits recorded yet.'}</td></tr>`;
+      return;
+    }
+
+    document.getElementById('visits-body').innerHTML = visits.map(v => {
+      const d = new Date(v.time);
+      const dateStr = d.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/London' });
+      return `<tr>
+        <td class="visit-time">${dateStr}</td>
+        <td class="visit-loc">${v.location || 'Unknown'}</td>
+        <td class="visit-ua">${parseDevice(v.userAgent)}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('visits-body').innerHTML =
+      `<tr><td colspan="3" class="status-msg"><span class="error">⚠ ${e.message}</span></td></tr>`;
+  }
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
+logVisit();
 loadAll();
 </script>
 </body>

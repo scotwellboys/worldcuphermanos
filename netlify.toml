@@ -21,3 +21,13 @@
   from = "/api/get-scores"
   to = "/.netlify/functions/get-scores"
   status = 200
+
+[[redirects]]
+  from = "/api/log-visit"
+  to = "/.netlify/functions/log-visit"
+  status = 200
+
+[[redirects]]
+  from = "/api/get-visits"
+  to = "/.netlify/functions/get-visits"
+  status = 200
