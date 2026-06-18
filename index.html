@@ -19,8 +19,11 @@
   }
   html { scroll-behavior:smooth; }
   body { font-family:'Inter',sans-serif; background:var(--pitch); color:var(--white); min-height:100vh; font-size:14px; line-height:1.5; }
+  #sticky-banner { position:sticky; top:0; z-index:50; background:linear-gradient(160deg,#0F3D23 0%,#0A2E1A 60%); border-bottom:1px solid var(--border); }
+  #sticky-banner header { background:transparent; border-bottom:none; padding:20px 24px 12px; }
+  #sticky-banner .filter-bar { margin:0; padding:8px 16px 10px; border-top:1px solid var(--border); justify-content:center; }
 
-  header { background:linear-gradient(160deg,#0F3D23 0%,#0A2E1A 60%); border-bottom:1px solid var(--border); padding:28px 24px 20px; text-align:center; position:sticky; top:0; z-index:50; overflow:hidden; }
+  header { background:linear-gradient(160deg,#0F3D23 0%,#0A2E1A 60%); padding:28px 24px 20px; text-align:center; position:relative; overflow:hidden; }
   header::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 60% 80% at 50% 120%,rgba(245,166,35,.12) 0%,transparent 70%); pointer-events:none; }
   .eyebrow { font-size:11px; font-weight:600; letter-spacing:.18em; color:var(--accent); text-transform:uppercase; margin-bottom:6px; }
   h1 { font-family:'Oswald',sans-serif; font-size:clamp(28px,6vw,52px); font-weight:700; letter-spacing:.02em; line-height:1; text-transform:uppercase; }
@@ -53,7 +56,6 @@
 
   /* Tabs */
   .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
-  #top-tabs { position:sticky; top:0; z-index:40; background:var(--pitch); padding:12px 16px; margin:0 -16px 8px; border-bottom:1px solid var(--border); }
   .filter-btn { font-size:12px; font-weight:500; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:20px; padding:5px 14px; color:var(--off); cursor:pointer; transition:all .15s; }
   .filter-btn:hover,.filter-btn.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
 
@@ -157,19 +159,21 @@
 </head>
 <body>
 
-<header>
-  <div class="eyebrow">San Sebastián Hermanos</div>
-  <h1>2026 <span>World Cup</span></h1>
-  <div class="header-sub">48 teams · 8 players · Win = 3pts · Draw = 1pt</div>
-  <div class="last-updated" id="ts">Loading…</div>
-</header>
-
-<main>
-  <div class="filter-bar" id="top-tabs" style="margin-bottom:24px">
+<div id="sticky-banner">
+  <header>
+    <div class="eyebrow">San Sebastián Hermanos</div>
+    <h1>2026 <span>World Cup</span></h1>
+    <div class="header-sub">48 teams · 8 players · Win = 3pts · Draw = 1pt</div>
+    <div class="last-updated" id="ts">Loading…</div>
+  </header>
+  <div class="filter-bar">
     <button class="filter-btn active" onclick="setView('matches',this)">Matches</button>
     <button class="filter-btn"        onclick="setView('groups',this)">Group Tables</button>
     <button class="filter-btn"        onclick="setView('admin',this)">Admin</button>
   </div>
+</div>
+
+<main>
 
   <div id="view-matches">
   <section>
@@ -392,7 +396,7 @@ function renderLeaderboard() {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 function setView(v, btn) {
-  document.querySelectorAll('main > .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#sticky-banner .filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('view-matches').style.display = v==='matches' ? '' : 'none';
   document.getElementById('view-groups').style.display  = v==='groups'  ? '' : 'none';
